@@ -26,6 +26,28 @@ from pipeline import (
 
 TEST_IMAGE = Path(__file__).resolve().parent / "assets" / "imagem-teste.jpg"
 
+RESPONSIVE_CSS = """
+.gradio-container { width: 100%; }
+.report-table { min-width: 0 !important; overflow-x: auto; }
+.report-table table { font-size: 0.875rem; }
+@media (max-width: 767px) {
+    .gradio-container { padding: 12px !important; }
+    .gradio-container h1 { font-size: 1.5rem !important; line-height: 1.25 !important; }
+    .gradio-container h3 { font-size: 1.125rem !important; }
+    .mobile-stack { flex-direction: column !important; }
+    .mobile-stack > * { min-width: 0 !important; width: 100% !important; flex: auto !important; }
+    .gradio-container .prose { overflow-wrap: anywhere; }
+    .gradio-container [role="tablist"] { flex-wrap: wrap; gap: 4px; }
+    .gradio-container .tab-container button { min-height: 44px; padding: 8px; font-size: 0.8125rem; }
+    #test-image-button, #classify-button { min-height: 48px; width: 100%; }
+    #input-radiograph, #heatmap { height: 240px !important; min-width: 0 !important; }
+    #example-gallery .grid-container { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 380px) {
+    #example-gallery .grid-container { grid-template-columns: minmax(0, 1fr) !important; }
+}
+"""
+
 
 def load_test_image():
     with Image.open(TEST_IMAGE) as source:
@@ -122,39 +144,39 @@ def build_app() -> gr.Blocks:
         errors = [row for row in raw["predictions"] if row["true"] != row["predicted"]]
     error = max(errors, key=lambda row: row["confidence"]) if errors else None
 
-    with gr.Blocks(title="Controle de posicionamento panorâmico") as app:
+    with gr.Blocks(title="Controle de posicionamento panorâmico", css=RESPONSIVE_CSS) as app:
         gr.Markdown("# Controle de posicionamento em radiografias panorâmicas\nClassificação automática em seis condições de aquisição. O escore indica a preferência do modelo entre as classes; não mede a chance real de acerto. Esta ferramenta não faz diagnóstico.")
         if inference_url:
             gr.Markdown(f"Processamento remoto habilitado: `{inference_url}`. A imagem será enviada à API configurada.")
         with gr.Tab("Classificar"):
-            with gr.Row():
-                input_image = gr.Image(label="Radiografia panorâmica", type="pil", sources=["upload"])
-                with gr.Column():
-                    test_image_button = gr.Button("imagem teste")
+            with gr.Row(elem_classes="mobile-stack"):
+                input_image = gr.Image(label="Radiografia panorâmica", type="pil", sources=["upload"], elem_id="input-radiograph")
+                with gr.Column(min_width=0):
+                    test_image_button = gr.Button("imagem teste", elem_id="test-image-button")
                     gr.Markdown("Carregue uma imagem teste e clique em Classificar.")
-                    classify_button = gr.Button("Classificar", variant="primary")
+                    classify_button = gr.Button("Classificar", variant="primary", elem_id="classify-button")
                     headline = gr.Markdown()
                     scores = gr.Label(label="Escores por classe", num_top_classes=6)
-            heatmap = gr.Image(label="Regiões que contribuíram para a classe prevista", type="pil")
+            heatmap = gr.Image(label="Regiões que contribuíram para a classe prevista", type="pil", elem_id="heatmap")
             gr.Markdown("O mapa mostra a contribuição aproximada dos blocos visuais para diferenciar as duas classes mais prováveis. As representações têm contexto global; o mapa não deve ser interpretado como localização clínica precisa.")
             classify_button.click(classify, inputs=input_image, outputs=[headline, scores, heatmap])
             test_image_button.click(load_test_image, inputs=[], outputs=[input_image, headline, scores, heatmap])
         with gr.Tab("Resultados do teste"):
             gr.Markdown("O teste fornecido tem 81 arquivos. Onze pares contêm a mesma imagem com rótulos diferentes.")
-            with gr.Row():
-                gr.Markdown(summary_table(raw, "Teste completo"))
-                gr.Markdown(summary_table(clean, "Teste sem conflitos de rótulo"))
+            with gr.Row(elem_classes="mobile-stack"):
+                gr.Markdown(summary_table(raw, "Teste completo"), elem_classes="report-table")
+                gr.Markdown(summary_table(clean, "Teste sem conflitos de rótulo"), elem_classes="report-table")
             gr.Markdown(top_confusions(raw))
             gr.Markdown(f"Tempo de inferência após aquecimento: mediana **{benchmark['median_ms']:.0f} ms**, p95 **{benchmark['p95_ms']:.0f} ms** em {benchmark['device'].upper()}.")
-            with gr.Row():
+            with gr.Row(elem_classes="mobile-stack"):
                 gr.Image(value=str(report_dir / "test_raw_confusion.png"), label="Matriz — 81 arquivos", interactive=False)
                 gr.Image(value=str(report_dir / "test_clean_confusion.png"), label="Matriz — 59 imagens", interactive=False)
         with gr.Tab("Exemplos"):
             gr.Markdown("### Um exemplo de cada classe do teste sem conflito")
-            gr.Gallery(value=examples, label="Seis classes", columns=3, object_fit="contain", height=280)
+            gr.Gallery(value=examples, label="Seis classes", columns=3, object_fit="contain", height=280, elem_id="example-gallery")
             if error:
                 gr.Markdown(f"### Um erro real do modelo\nClasse real: **{CLASS_NAMES[error['true']]}** · Prevista: **{CLASS_NAMES[error['predicted']]}** · Escore: **{error['confidence']:.1%}**.")
-                with gr.Row():
+                with gr.Row(elem_classes="mobile-stack"):
                     gr.Image(value=str(IMAGES / f"{error['hash']}.jpg"), label="Imagem classificada incorretamente", interactive=False)
                     if inference_url:
                         gr.Markdown("Envie esta imagem na aba Classificar para obter o mapa pela API remota.")
