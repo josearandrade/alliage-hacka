@@ -1,0 +1,10 @@
+.python/
+.venv/
+.python-installer.exe
+.tmp/
+desafio 2-*.zip
+data/
+artifacts/*.joblib
+__pycache__/
+.pytest_cache/
+*.pyc
