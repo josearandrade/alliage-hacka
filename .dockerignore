@@ -1,0 +1,8 @@
+.git
+.venv
+.python
+.tmp
+__pycache__
+*.pyc
+desafio 2-*.zip
+data/features*.npz

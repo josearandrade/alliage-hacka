@@ -1,0 +1,12 @@
+.python/
+.venv/
+.python-installer.exe
+.tmp/
+desafio 2-*.zip
+data/
+artifacts/
+.gradio/
+.ruff_cache/
+__pycache__/
+.pytest_cache/
+*.pyc
